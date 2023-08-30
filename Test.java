@@ -29,6 +29,7 @@ public class Test {
 
 	private static class Tree {
 		private static Map<String , Node> stringToNode = new HashMap<String , Node>(); 
+      	private static Set<Node> vis = new HashSet<Node>();
 		
 		private static void buildTree(String[] countries , int m) {
 			Node root = new Node();
@@ -97,8 +98,9 @@ public class Test {
 				if (parent.lockedCount > 0 || parent.lockedDescNodes.size() > 0 || vis.contains(parent)) {
 					node.lockedCount--;
 					parent = node.parent;
-					while (parent != null) {
-						parent.lockedDescNodes.remove(node);
+					while (parent != null) { 
+                      	if (parent.lockedDescNodes.contains(node))
+							parent.lockedDescNodes.remove(node);
 						parent = parent.parent;
 					} 
 					return false;
@@ -121,7 +123,7 @@ public class Test {
 		}
 	}
 
-	static boolean unlockNode(String name , int id) {
+	public static boolean unlockNode(String name , int id) {
 		Node node = stringToNode.get(name);
 		if (node.lockedCount == 0 || node.id != id) return false;
 		
@@ -130,14 +132,15 @@ public class Test {
 			parent.lockedDescNodes.remove(node);
 			parent = parent.parent;
 		}
-		node.lockedCount = 1;
+      	node.lockedDescNodes.clear();
+		node.lockedCount = 0;
 		node.id = 0;
 
 		vis.remove(node); // before it was at last in the lock method (line 119)
 		return true;
 	}
 
-	static boolean upgradeNode(String name , int id) {
+	public static boolean upgradeNode(String name , int id) {
 		Node node = stringToNode.get(name);
 		if (node.lockedCount > 0 || node.lockedDescNodes.size() == 0) return false;
 		
