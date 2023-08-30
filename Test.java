@@ -1,6 +1,6 @@
 import java.util.*;
 
-public class Test {
+public class Test extends Thread {
 	private static class Node {
 		int id , lockedCount;
 		boolean isBusy;
@@ -27,8 +27,8 @@ public class Test {
 		}
 	}
 
+	private static Map<String , Node> stringToNode = new HashMap<String , Node>(); 
 	private static class Tree {
-		private static Map<String , Node> stringToNode = new HashMap<String , Node>(); 
       	private static Set<Node> vis = new HashSet<Node>();
 		
 		private static void buildTree(String[] countries , int m) {
@@ -67,8 +67,7 @@ public class Test {
 		}
 		private static Semaphore mutex = new Semaphore();
 
-		public boolean lockNode(String name , int id) {
-			Node node = stringToNode.get(name); 
+		public static boolean lockNode(Node node , int id) {
 			vis.add(node);
 			if (node.lockedCount > 0 || node.lockedDescNodes.size() > 0) return false;
 			
@@ -121,39 +120,72 @@ public class Test {
 			// vis.remove(node); //write this at the last of unlock function before returning true (line 136)
 			return true;
 		}
+
+		public static boolean unlockNode(Node node , int id) {
+			if (node.lockedCount == 0 || node.id != id) return false;
+			
+			var parent = node.parent;
+			while (parent != null) {
+				parent.lockedDescNodes.remove(node);
+				parent = parent.parent;
+			}
+	      	node.lockedDescNodes.clear();
+			node.lockedCount = 0;
+			node.id = 0;
+
+			vis.remove(node); // before it was at last in the lock method (line 119)
+			return true;
+		}
+
+		public static boolean upgradeNode(Node node , int id) {
+			if (node.lockedCount > 0 || node.lockedDescNodes.size() == 0) return false;
+			
+			var parent = node.parent;
+			while (parent != null) {
+				if (parent.lockedCount > 0) return false;
+				parent = parent.parent;
+			}
+			for (var lockedChild : node.lockedDescNodes) {
+				unlockNode(lockedChild , id);
+			}
+			lockNode(node , id);
+			return true;
+		}
 	}
 
-	public static boolean unlockNode(String name , int id) {
-		Node node = stringToNode.get(name);
-		if (node.lockedCount == 0 || node.id != id) return false;
-		
-		var parent = node.parent;
-		while (parent != null) {
-			parent.lockedDescNodes.remove(node);
-			parent = parent.parent;
-		}
-      	node.lockedDescNodes.clear();
-		node.lockedCount = 0;
-		node.id = 0;
-
-		vis.remove(node); // before it was at last in the lock method (line 119)
-		return true;
+	private static String[] str = new String[]{"India" , "World" , "China"};
+	private static int idx = 0;
+	@Override
+	public void run() { 
+		System.out.println("Current Thread is : " + currentThread().getName());
+		int id = 9;
+		var curr = str[idx];
+		System.out.println("Node is : " + curr);
+		var ans = t.lockNode(stringToNode.get(curr) , 9);
+		idx = idx + 1;
+		System.out.println(ans);
 	}
 
-	public static boolean upgradeNode(String name , int id) {
-		Node node = stringToNode.get(name);
-		if (node.lockedCount > 0 || node.lockedDescNodes.size() == 0) return false;
+	private Tree t = new Tree();
+	private static Scanner scn;
+
+	// The main method
+	public static void main(String[] args) { 
+		scn = new Scanner(System.in);
+		System.out.println("Starting Code!!");
+		int n = 7;
+		// int m = scn.nextInt(); 
+		// int q = scn.nextInt
+
+		String[] countries = new String[]{"World" , "Asia" , "Africa" , "China" , "India" , "SouthAfrica" , "Egypt"};
 		
-		var parent = node.parent;
-		while (parent != null) {
-			if (parent.lockedCount > 0) return false;
-			parent = parent.parent;
-		}
-		for (var lockedChild : node.lockedDescNodes) {
-			unlockNode(lockedChild , id);
-		}
-		lockNode(node , id);
-		return true;
+		Tree.buildTree(countries , 2); 
+		var obj = new Test();
+		Thread t1 = new Thread(obj , "t1");
+		Thread t2 = new Thread(obj , "t2");
+		Thread t3 = new Thread(obj , "t3");
+		t1.start();
+		t2.start();
+		t3.start();
 	}
 }
-
